@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools>=67", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "email-assistant"
+version = "0.1.0"
+description = "Multi-agent email assistant."
+readme = "README.md"
+requires-python = ">=3.10"
