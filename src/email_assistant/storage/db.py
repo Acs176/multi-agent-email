@@ -138,6 +138,31 @@ class Database:
             received_at=datetime.datetime.fromisoformat(row["received_at"]),
         )
 
+    def fetch_emails_for_thread(self, thread_id: str) -> List[Email]:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT * FROM emails "
+            "WHERE thread_id = ? "
+            "ORDER BY received_at ASC",
+            (thread_id,),
+        )
+        rows = cursor.fetchall()
+        return [
+            Email(
+                mail_id=row["mail_id"],
+                external_id=row["external_id"],
+                thread_id=row["thread_id"],
+                from_name=row["from_name"],
+                from_email=row["from_email"],
+                to=json.loads(row["to"]),
+                cc=json.loads(row["cc"]),
+                subject=row["subject"],
+                body=row["body"],
+                received_at=datetime.datetime.fromisoformat(row["received_at"]),
+            )
+            for row in rows
+        ]
+    
     def fetch_action(self, action_id: str) -> Optional[Action]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,))

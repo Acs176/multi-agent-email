@@ -33,23 +33,13 @@ def main() -> None:
 
     sample_email = Email(
         mail_id=str(uuid.uuid4()),
-        thread_id="thread-001",
-        from_name="Alice",
-        from_email="alice@example.com",
-        to=["me@example.com"],
-        subject="Project Update",
-        body="""
-        Hello Adrian, 
-
-Hope all is well. 
-
-We are happy to proceed forward with the recruitment process, the next step is a test (attached). 
-
-Deadline: 22nd September 2025
-
-Best of luck!
-
-        """,
+        thread_id="thread-project-launch",
+        from_name="Priya Singh",
+        from_email="pm@example.com",
+        to=["alice.johnson@example.com", "diego.martinez@example.com"],
+        cc=["finance@example.com", "product@example.com"],
+        subject="Re: Project Launch - Kickoff Prep",
+        body="Looks solid now! Finance confirmed the numbers on slide 6. I suggest we trim slide 9 a bit—too much detail for kickoff. Otherwise, I think we’re ready to present tomorrow.\n\n- Priya",
     )
 
     result = orchestrator.process_new_email(sample_email)

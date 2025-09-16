@@ -1,16 +1,17 @@
 """Email scheduling agent built on PydanticAI."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Sequence
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from ..business.models import Email
-from .utils import _format_email
+from .utils import _format_thread
 
 INSTRUCTIONS = """
 You help schedule follow-up meetings or tasks triggered by incoming emails.
+Review the entire thread to understand context.
 Reply with JSON using only these keys:
 {
   "title": string describing the event,
@@ -37,8 +38,8 @@ class EmailSchedulerAgent:
             output_type=ProposedEvent,
         )
 
-    def propose_event(self, email: Email) -> ProposedEvent:
-        return self._agent.run_sync(_format_email(email)).output
+    def propose_event(self, thread: Sequence[Email]) -> ProposedEvent:
+        return self._agent.run_sync(_format_thread(thread)).output
 
-    async def propose_event_async(self, email: Email) -> ProposedEvent:
-        return (await self._agent.run(_format_email(email))).output
+    async def propose_event_async(self, thread: Sequence[Email]) -> ProposedEvent:
+        return (await self._agent.run(_format_thread(thread))).output

@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "description": "Approved human-reviewed reply drafts for exercising action ingestion flows.",
+    "created_at": "2025-09-16T22:55:00Z"
+  },
+  "approved_drafts": [
+    {
+      "action_id": "draft-001",
+      "mail_id": "email-002",
+      "type": "send_email",
+      "status": "confirmed",
+      "payload": {
+        "to": "diego.martinez@example.com",
+        "subject": "Re: Project Launch - Kickoff Prep",
+        "body": "Hi Diego,\n\nThanks for flagging the pricing issue. I've replaced the beta numbers with the enterprise figures and double-checked the tables for accuracy. Please let me know if anything else needs an edit.\n\nBest regards,\nJordan"
+      },
+      "result": {
+        "approved_by": "project-manager@example.com",
+        "approved_at": "2025-09-15T10:05:00Z"
+      }
+    },
+    {
+      "action_id": "draft-002",
+      "mail_id": "email-004",
+      "type": "send_email",
+      "status": "confirmed",
+      "payload": {
+        "to": "priya.desai@example.com",
+        "subject": "Re: Vendor Renewal - Action Required",
+        "body": "Hi Priya,\n\nLet's proceed with the renewal at the 8% discount. Procurement can release the PO once Legal shares the countersigned MSA. Thanks for coordinating the handoffs.\n\nBest regards,\nJordan"
+      },
+      "result": {
+        "approved_by": "legal@example.com",
+        "approved_at": "2025-09-16T09:00:00Z"
+      }
+    },
+    {
+      "action_id": "draft-003",
+      "mail_id": "email-007",
+      "type": "send_email",
+      "status": "modified",
+      "payload": {
+        "to": "alerts@example.com, success@example.com",
+        "subject": "Re: Customer Escalation - ACME Corp",
+        "body": "Hi team,\n\nI'm picking up the ACME Corp Sev2. Plan is to provide daily updates at 4pm PT until the ETL job completes successfully three nights in a row. Let me know if we need executive coverage or additional comms.\n\nBest regards,\nJordan"
+      },
+      "result": {
+        "notes": "Reviewer added success alias to CC line and clarified cadence.",
+        "approved_by": "head-of-support@example.com",
+        "approved_at": "2025-09-16T07:00:00Z"
+      }
+    },
+    {
+      "action_id": "draft-004",
+      "mail_id": "email-009",
+      "type": "send_email",
+      "status": "confirmed",
+      "payload": {
+        "to": "casey.lee@example.com",
+        "subject": "Re: Follow-up: Ops Review",
+        "body": "Hi Casey,\n\nAttached is the automation metrics deck. Action items for next week are to finalize the data quality audit, submit the runbook updates, and confirm monitoring thresholds with SRE. Let me know if you need anything else.\n\nBest regards,\nJordan"
+      },
+      "result": {
+        "approved_by": "ops-director@example.com",
+        "approved_at": "2025-09-16T11:00:00Z"
+      }
+    },
+    {
+      "action_id": "event-001",
+      "mail_id": "email-006",
+      "type": "create_event",
+      "status": "confirmed",
+      "payload": {
+        "title": "Lunch & Learn: AI Safety Briefing",
+        "start_time": "2025-09-24T12:00:00-07:00",
+        "end_time": "2025-09-24T13:00:00-07:00",
+        "location": "Big Conference Room",
+        "attendees": [
+          "me@example.com",
+          "hr-programs@example.com"
+        ]
+      },
+      "result": {
+        "notes": "Invite sent with catering request in comment.",
+        "approved_by": "hr-programs@example.com",
+        "approved_at": "2025-09-15T16:20:00Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+﻿{
+  "metadata": {
+    "description": "Synthetic inbox for exercising the email assistant agents during manual and automated testing.",
+    "created_at": "2025-09-16T22:50:00Z"
+  },
+  "emails": [
+    {
+      "mail_id": "email-001",
+      "external_id": "gmail:A1",
+      "thread_id": "thread-project-launch",
+      "from_name": "Alice Johnson",
+      "from_email": "alice.johnson@example.com",
+      "to": ["teamlead@example.com", "pm@example.com"],
+      "cc": ["product@example.com"],
+      "subject": "Project Launch - Kickoff Prep",
+      "body": "Hi team,\n\nPlease review the attached kickoff deck before tomorrow's standup. Let me know if the marketing copy looks good or needs tweaks.\n\nThanks,\nAlice",
+      "received_at": "2025-09-15T08:45:00Z"
+    },
+    {
+      "mail_id": "email-002",
+      "external_id": "gmail:A2",
+      "thread_id": "thread-project-launch",
+      "from_name": "Diego Martinez",
+      "from_email": "diego.martinez@example.com",
+      "to": ["alice.johnson@example.com"],
+      "cc": ["pm@example.com"],
+      "subject": "Re: Project Launch - Kickoff Prep",
+      "body": "Hi Alice,\n\nSlide 6 still references the beta pricing. Could you swap in the updated enterprise numbers? I can help if needed.\n\n-Diego",
+      "received_at": "2025-09-15T09:12:00Z"
+    },
+    {
+      "mail_id": "email-003",
+      "thread_id": "thread-project-launch",
+      "from_name": "Alice Johnson",
+      "from_email": "alice.johnson@example.com",
+      "to": ["diego.martinez@example.com"],
+      "cc": ["pm@example.com", "finance@example.com"],
+      "subject": "Re: Project Launch - Kickoff Prep",
+      "body": "Thanks Diego,\n\nGood catch. I updated slide 6 with the enterprise pricing and pinged finance for a quick sanity check. Anything else stand out?\n\nAlice",
+      "received_at": "2025-09-15T09:40:00Z"
+    },
+    {
+      "mail_id": "email-004",
+      "external_id": "outlook:9853",
+      "thread_id": "thread-vendor-renewal",
+      "from_name": "Priya Desai",
+      "from_email": "priya.desai@example.com",
+      "to": ["me@example.com"],
+      "cc": ["legal@example.com"],
+      "subject": "Vendor Renewal - Action Required",
+      "body": "Hello,\n\nThe Contoso support contract expires on Friday. Please confirm if we are proceeding with the renewal at the negotiated 8% discount, or if procurement should pause. Legal wants a reply today.\n\nRegards,\nPriya",
+      "received_at": "2025-09-16T07:55:00Z"
+    },
+    {
+      "mail_id": "email-005",
+      "thread_id": "thread-vendor-renewal",
+      "from_name": "Legal Team",
+      "from_email": "legal@example.com",
+      "to": ["priya.desai@example.com", "me@example.com"],
+      "cc": [],
+      "subject": "Re: Vendor Renewal - Action Required",
+      "body": "Adding that the updated MSA is ready for signature, pending confirmation that support seats stay at 25.\n\nThanks,\nAlex",
+      "received_at": "2025-09-16T08:10:00Z"
+    },
+    {
+      "mail_id": "email-006",
+      "thread_id": "thread-lunch-learn",
+      "from_name": "HR Programs",
+      "from_email": "hr-programs@example.com",
+      "to": ["me@example.com"],
+      "cc": [],
+      "subject": "Lunch & Learn: AI Safety Briefing",
+      "body": "We're hosting an AI safety lunch & learn next Wednesday at noon in the big conference room. RSVP by Friday so we can order food. Speaker slides will be shared afterward.",
+      "received_at": "2025-09-14T15:30:00Z"
+    },
+    {
+      "mail_id": "email-007",
+      "external_id": "gsuite:44f1",
+      "thread_id": "thread-cs-escalation",
+      "from_name": "Support Alerts",
+      "from_email": "alerts@example.com",
+      "to": ["me@example.com"],
+      "cc": ["success@example.com"],
+      "subject": "Customer Escalation - ACME Corp",
+      "body": "Heads up: ACME Corp opened a Sev2 because their nightly ETL job has failed for three days. They are threatening to escalate to the exec sponsor. Need an owner for comms.",
+      "received_at": "2025-09-16T06:10:00Z"
+    },
+    {
+      "mail_id": "email-008",
+      "thread_id": "thread-budget-approval",
+      "from_name": "CFO Office",
+      "from_email": "financelead@example.com",
+      "to": ["me@example.com"],
+      "cc": ["finance@example.com"],
+      "subject": "Budget Approval Reminder",
+      "body": "Reminder that the Q4 tooling budget request is due tomorrow. Please attach the final spreadsheet with the updated headcount assumptions.",
+      "received_at": "2025-09-13T17:05:00Z"
+    },
+    {
+      "mail_id": "email-009",
+      "thread_id": "thread-meeting-followup",
+      "from_name": "Casey Lee",
+      "from_email": "casey.lee@example.com",
+      "to": ["me@example.com"],
+      "cc": [],
+      "subject": "Follow-up: Ops Review",
+      "body": "Thanks for joining the operations review earlier. Could you send over the automation metrics deck and confirm the action items for next week?",
+      "received_at": "2025-09-16T10:25:00Z"
+    }
+  ]
+}

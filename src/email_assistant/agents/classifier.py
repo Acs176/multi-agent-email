@@ -1,13 +1,13 @@
 """Minimal email classification agent built on PydanticAI."""
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Sequence
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from ..business.models import Email
-from .utils import _format_email
+from .utils import _format_thread
 
 INSTRUCTIONS = """
 You estimate how an email should be triaged.
@@ -48,11 +48,13 @@ class EmailClassifierAgent:
             output_type=EmailClassification,
         )
 
-    def classify(self, email: Email) -> EmailClassification:
-        return self._agent.run_sync(_format_email(email)).output
+    def classify(self, thread: Sequence[Email]) -> EmailClassification:
+        """Classify an email conversation thread."""
+        return self._agent.run_sync(_format_thread(thread)).output
 
-    async def classify_async(self, email: Email) -> EmailClassification:
-        return (await self._agent.run(_format_email(email))).output
+    async def classify_async(self, thread: Sequence[Email]) -> EmailClassification:
+        """Asynchronously classify an email conversation thread."""
+        return (await self._agent.run(_format_thread(thread))).output
 
     def decisions(self, classification: EmailClassification) -> Dict[str, bool]:
         data = classification.as_dict()
