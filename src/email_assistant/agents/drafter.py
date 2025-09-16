@@ -1,16 +1,17 @@
 """Email draft generation agent built on PydanticAI."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Sequence
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from ..business.models import Email
-from .utils import _format_email
+from .utils import _format_thread
 
 INSTRUCTIONS = """
 You write helpful reply drafts for incoming emails.
+Assume the last message in the thread is the one that needs a response.
 Reply with JSON containing only these keys:
 {
   "to": string of comma-separated recipients,
@@ -37,8 +38,8 @@ class EmailDrafterAgent:
             output_type=EmailDraft,
         )
 
-    def draft(self, email: Email) -> EmailDraft:
-        return self._agent.run_sync(_format_email(email)).output
+    def draft(self, thread: Sequence[Email]) -> EmailDraft:
+        return self._agent.run_sync(_format_thread(thread)).output
 
-    async def draft_async(self, email: Email) -> EmailDraft:
-        return (await self._agent.run(_format_email(email))).output
+    async def draft_async(self, thread: Sequence[Email]) -> EmailDraft:
+        return (await self._agent.run(_format_thread(thread))).output
