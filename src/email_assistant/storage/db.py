@@ -3,8 +3,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict, Optional, List
 import json
-from datetime import datetime
-
+from ..business.models import Email, Action, Summary
+import datetime
 DB_PATH = "./assistant.db"
 
 class Database:
@@ -27,8 +27,7 @@ class Database:
                 "cc" JSON,
                 subject TEXT,
                 body TEXT,
-                received_at TIMESTAMP,
-                raw JSON
+                received_at TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS actions (
@@ -54,30 +53,29 @@ class Database:
         self.conn.commit()
 
     # ---------- Insert helpers ----------
-    def insert_email(self, mail: Dict[str, Any]):
+    def insert_email(self, email: Email):
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            INSERT INTO emails (mail_id, external_id, thread_id, from_name, from_email, "to", "cc", subject, body, received_at, raw)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO emails (mail_id, external_id, thread_id, from_name, from_email, "to", "cc", subject, body, received_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                mail["mail_id"],
-                mail.get("external_id"),
-                mail.get("thread_id"),
-                mail.get("from_name"),
-                mail.get("from_email"),
-                json.dumps(mail.get("to", [])),
-                json.dumps(mail.get("cc", [])),
-                mail.get("subject"),
-                mail.get("body"),
-                mail.get("received_at", datetime.utcnow().isoformat()),
-                json.dumps(mail.get("raw", {})),
+                email.mail_id,
+                email.external_id,
+                email.thread_id,
+                email.from_name,
+                email.from_email,
+                json.dumps(email.to),
+                json.dumps(email.cc),
+                email.subject,
+                email.body,
+                email.received_at.isoformat(),
             ),
         )
         self.conn.commit()
 
-    def insert_action(self, action: Dict[str, Any]):
+    def insert_action(self, action: Action):
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -85,27 +83,27 @@ class Database:
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
-                action["action_id"],
-                action.get("mail_id"),
-                action["type"],
-                action["status"],
-                json.dumps(action["payload"]),
-                json.dumps(action.get("result")),
+                action.action_id,
+                action.mail_id,
+                action.type,
+                action.status,
+                json.dumps(action.payload),
+                json.dumps(action.result) if action.result else None,
             ),
         )
         self.conn.commit()
 
-    def insert_summary(self, summary: Dict[str, Any]):
+    def insert_summary(self, summary: Summary):
         cursor = self.conn.cursor()
 
         # Check if the thread exists in emails
         cursor.execute(
             "SELECT 1 FROM emails WHERE thread_id = ? LIMIT 1",
-            (summary["thread_id"],),
+            (summary.thread_id,),
         )
         exists = cursor.fetchone()
         if not exists:
-            raise ValueError(f"Thread {summary['thread_id']} does not exist in emails")
+            raise ValueError(f"Thread {summary.thread_id} does not exist in emails")
 
         cursor.execute(
             """
@@ -113,51 +111,69 @@ class Database:
             VALUES (?, ?, ?)
             """,
             (
-                summary["summary_id"],
-                summary["thread_id"],
-                summary["text"],
+                summary.summary_id,
+                summary.thread_id,
+                summary.text,
             ),
         )
         self.conn.commit()
 
     # ---------- Fetch helpers ----------
-    def fetch_email(self, mail_id: str) -> Optional[Dict[str, Any]]:
+    def fetch_email(self, mail_id: str) -> Optional[Email]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM emails WHERE mail_id = ?", (mail_id,))
         row = cursor.fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        return Email(
+            mail_id=row["mail_id"],
+            external_id=row["external_id"],
+            thread_id=row["thread_id"],
+            from_name=row["from_name"],
+            from_email=row["from_email"],
+            to=json.loads(row["to"]),
+            cc=json.loads(row["cc"]),
+            subject=row["subject"],
+            body=row["body"],
+            received_at=datetime.datetime.fromisoformat(row["received_at"]),
+        )
 
-    def fetch_action(self, action_id: str) -> Optional[Dict[str, Any]]:
+    def fetch_action(self, action_id: str) -> Optional[Action]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,))
         row = cursor.fetchone()
-        if row:
-            d = dict(row)
-            d["payload"] = json.loads(d["payload"])
-            d["result"] = json.loads(d["result"]) if d["result"] else None
-            return d
-        return None
+        if not row:
+            return None
+        return Action(
+            action_id=row["action_id"],
+            mail_id=row["mail_id"],
+            type=row["type"],
+            status=row["status"],
+            payload=json.loads(row["payload"]),
+            result=json.loads(row["result"]) if row["result"] else None,
+        )
 
-    def fetch_actions_for_email(self, mail_id: str) -> List[Dict[str, Any]]:
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM actions WHERE mail_id = ?", (mail_id,))
-        rows = cursor.fetchall()
-        results = []
-        for row in rows:
-            d = dict(row)
-            d["payload"] = json.loads(d["payload"])
-            d["result"] = json.loads(d["result"]) if d["result"] else None
-            results.append(d)
-        return results
-
-    def fetch_summary(self, summary_id: str) -> Optional[Dict[str, Any]]:
+    def fetch_summary(self, summary_id: str) -> Optional[Summary]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM summaries WHERE summary_id = ?", (summary_id,))
         row = cursor.fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        return Summary(
+            summary_id=row["summary_id"],
+            thread_id=row["thread_id"],
+            text=row["text"],
+        )
 
-    def fetch_summaries_for_thread(self, thread_id: str) -> List[Dict[str, Any]]:
+    def fetch_summaries_for_thread(self, thread_id: str) -> List[Summary]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM summaries WHERE thread_id = ?", (thread_id,))
         rows = cursor.fetchall()
-        return [dict(r) for r in rows]
+        return [
+            Summary(
+                summary_id=row["summary_id"],
+                thread_id=row["thread_id"],
+                text=row["text"],
+            )
+            for row in rows
+        ]

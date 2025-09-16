@@ -1,31 +1,34 @@
 """Command-line entry point for the email assistant."""
 from .storage.db import Database
+from .business.models import Email, Action
+import uuid
 
 def main() -> None:
     db = Database()
-    db.insert_email({
-        "mail_id": "msg-001",
-        "thread_id": "thread-abc",
-        "from_name": "Alice",
-        "from_email": "alice@example.com",
-        "to": ["me@example.com"],
-        "cc": [],
-        "subject": "Project Update",
-        "body": "Let's move the meeting",
-        "received_at": "2025-09-15T12:34:56Z",
-    })
-    db.insert_summary({
-        "summary_id": "sum-123",
-        "thread_id": "thread-abc",
-        "text": "Alice suggested moving the meeting."
-    })
+    # Create and insert an Email
+    email = Email(
+        mail_id=str(uuid.uuid4()),
+        thread_id="thread-001",
+        from_name="Alice",
+        from_email="alice@example.com",
+        to=["me@example.com"],
+        subject="Project Update",
+        body="Hi, can we move the meeting?",
+    )
+    db.insert_email(email)
+    action = Action(
+        action_id=str(uuid.uuid4()),
+        mail_id=email.mail_id,
+        type="send_email",
+        status="pending",
+        payload={"to": ["alice@example.com"], "subject": "Re: Project Update", "body": "Sure!"},
+    )
+    db.insert_action(action)
+    fetched_email = db.fetch_email(email.mail_id)
+    print(fetched_email)
 
-    # TEST: This will raise ValueError since thread doesn't exist
-    db.insert_summary({
-        "summary_id": "sum-999",
-        "thread_id": "nonexistent-thread",
-        "text": "This should fail."
-    })
+    fetched_action = db.fetch_action(action.action_id)
+    print(fetched_action)
 
 
 if __name__ == "__main__":
