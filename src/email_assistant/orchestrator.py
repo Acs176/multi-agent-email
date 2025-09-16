@@ -1,30 +1,49 @@
-# src/orchestrator.py
-import uuid
-from typing import Dict, Any
+"""Coordinates the different agents that act on incoming emails."""
+from __future__ import annotations
 
+import uuid
+from typing import Any, Dict
+
+from .agents import (
+    EmailClassification,
+    EmailClassifierAgent,
+    EmailDrafterAgent,
+    EmailDraft,
+    EmailSchedulerAgent,
+    EmailSummarizerAgent,
+    ProposedEvent,
+)
+from .business.models import Action, Email, Summary
 from .storage.db import Database
-from .business.models import Email, Summary, Action
+
 
 class Orchestrator:
-    def __init__(self):
-        self.db = Database()
-        # self.classifier = Classifier()
-        # self.summarizer = Summarizer()
-        # self.drafter = Drafter()
-        # self.scheduler = Scheduler()
+    def __init__(
+        self,
+        *,
+        classifier: EmailClassifierAgent,
+        drafter: EmailDrafterAgent,
+        scheduler: EmailSchedulerAgent,
+        summarizer: EmailSummarizerAgent,
+        database: Database | None = None,
+    ) -> None:
+        self.db = database or Database()
+        self.classifier = classifier
+        self.drafter = drafter
+        self.scheduler = scheduler
+        self.summarizer = summarizer
 
     def process_new_email(self, email: Email) -> Dict[str, Any]:
         self.db.insert_email(email)
 
-        # Classify
-        labels = self.classifier.classify(email)
+        classification: EmailClassification = self.classifier.classify(email)
+        decisions = self.classifier.decisions(classification)
 
         proposed_actions = []
         summary_text = None
 
-        # Summarizer
-        if labels["needs_summary"]:
-            summary_text = self.summarizer.summarize(email)
+        if decisions["needs_summary"]:
+            summary_text = self.summarizer.summarize(email).summary
             summary = Summary(
                 summary_id=str(uuid.uuid4()),
                 thread_id=email.thread_id,
@@ -32,29 +51,26 @@ class Orchestrator:
             )
             self.db.insert_summary(summary)
 
-        # Drafter
-        if labels["needs_draft"]:
-            draft = self.drafter.draft(email)
+        if decisions["needs_draft"]:
+            draft: EmailDraft = self.drafter.draft(email)
             action = Action(
                 action_id=str(uuid.uuid4()),
                 mail_id=email.mail_id,
                 type="send_email",
                 status="pending",
-                payload=draft,
+                payload=draft.model_dump(),
             )
             self.db.insert_action(action)
-            ## TODO: Check if it works
             proposed_actions.append(action.model_dump())
 
-        # Scheduler
-        if labels["needs_schedule"]:
-            event = self.scheduler.propose_event(email)
+        if decisions["needs_schedule"]:
+            event: ProposedEvent = self.scheduler.propose_event(email)
             action = Action(
                 action_id=str(uuid.uuid4()),
                 mail_id=email.mail_id,
                 type="create_event",
                 status="pending",
-                payload=event,
+                payload=event.model_dump(),
             )
             self.db.insert_action(action)
             proposed_actions.append(action.model_dump())
@@ -62,5 +78,9 @@ class Orchestrator:
         return {
             "mail_id": email.mail_id,
             "summary": {"text": summary_text} if summary_text else None,
-            "proposed_actions": proposed_actions
+            "proposed_actions": proposed_actions,
+            "classification": {
+                "probabilities": classification.as_dict(),
+                "decisions": decisions,
+            },
         }
