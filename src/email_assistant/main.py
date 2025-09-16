@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import uuid
 import os
+from langfuse import get_client
+from pydantic_ai import Agent
 
 from dotenv import load_dotenv
 
@@ -17,9 +19,18 @@ from .orchestrator import Orchestrator
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
+Agent.instrument_all()
 
 def main() -> None:
     load_dotenv()
+
+    ## tracing setup
+    langfuse = get_client()
+    if langfuse.auth_check():
+        print("Langfuse client authenticated and ready!")
+    else:
+        print("Langfuse authentication failed")
+
     model_name = "gpt-4o"
     api_key = os.getenv("OPENAI_API_KEY")
     model = OpenAIChatModel(model_name, provider=OpenAIProvider(api_key=api_key))

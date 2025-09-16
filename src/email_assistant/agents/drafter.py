@@ -5,6 +5,7 @@ from typing import Any, Sequence
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+from langfuse import observe
 
 from ..business.models import Email
 from .utils import _format_thread
@@ -36,10 +37,11 @@ class EmailDrafterAgent:
             model=model,
             instructions=INSTRUCTIONS,
             output_type=EmailDraft,
+            instrument=True,
         )
-
+    @observe()
     def draft(self, thread: Sequence[Email]) -> EmailDraft:
         return self._agent.run_sync(_format_thread(thread)).output
-
+    @observe()
     async def draft_async(self, thread: Sequence[Email]) -> EmailDraft:
         return (await self._agent.run(_format_thread(thread))).output

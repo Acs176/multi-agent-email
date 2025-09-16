@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 from typing import Any, Dict
+from langfuse import observe, get_client
 
 from .agents import (
     EmailClassification,
@@ -33,7 +34,12 @@ class Orchestrator:
         self.scheduler = scheduler
         self.summarizer = summarizer
 
+    @observe()
     def process_new_email(self, email: Email) -> Dict[str, Any]:
+        langfuse = get_client()
+        session_id = uuid.uuid4()
+        langfuse.update_current_trace(session_id=f"{session_id}")
+
         self.db.insert_email(email)
         thread = self.db.fetch_emails_for_thread(email.thread_id)
         print(f"fetched {len(thread)} emails")

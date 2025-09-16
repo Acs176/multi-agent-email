@@ -2,6 +2,7 @@ from typing import Any, Sequence
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+from langfuse import observe
 
 from ..business.models import Email
 from .utils import _format_thread
@@ -23,10 +24,12 @@ class EmailSummarizerAgent:
             model=model,
             instructions=INSTRUCTIONS,
             output_type=EmailSummary,
+            instrument=True,
         )
 
+    @observe()
     def summarize(self, thread: Sequence[Email]) -> EmailSummary:
         return self._agent.run_sync(_format_thread(thread)).output
-
+    @observe()
     async def summarize_async(self, thread: Sequence[Email]) -> EmailSummary:
         return (await self._agent.run(_format_thread(thread))).output

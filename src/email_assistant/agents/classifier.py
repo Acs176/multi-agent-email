@@ -5,6 +5,8 @@ from typing import Any, Dict, Sequence
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+import uuid
+from langfuse import observe
 
 from ..business.models import Email
 from .utils import _format_thread
@@ -46,12 +48,15 @@ class EmailClassifierAgent:
             model=model,
             instructions=INSTRUCTIONS,
             output_type=EmailClassification,
+            instrument=True,
         )
-
+    
+    @observe()
     def classify(self, thread: Sequence[Email]) -> EmailClassification:
         """Classify an email conversation thread."""
         return self._agent.run_sync(_format_thread(thread)).output
 
+    @observe()
     async def classify_async(self, thread: Sequence[Email]) -> EmailClassification:
         """Asynchronously classify an email conversation thread."""
         return (await self._agent.run(_format_thread(thread))).output
