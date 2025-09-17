@@ -32,3 +32,14 @@ class Summary(BaseModel):
     summary_id: str
     thread_id: str
     text: str
+
+class ActionPreference(BaseModel):
+    preference_id: str
+    recipient_email: str
+    preference_key: str
+    preference_value: str
+    source_action_id: Optional[str] = None
+
+class GeneralPreference(BaseModel):
+    preference_key: str
+    preference_value: str

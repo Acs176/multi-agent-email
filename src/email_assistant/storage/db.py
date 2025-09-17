@@ -3,7 +3,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict, Optional, List
 import json
-from ..business.models import Email, Action, Summary
+import uuid
+from ..business.models import Email, Action, Summary, ActionPreference
 import datetime
 DB_PATH = "./assistant.db"
 
@@ -42,6 +43,22 @@ class Database:
                 FOREIGN KEY (mail_id) REFERENCES emails(mail_id)
             );
 
+
+            CREATE TABLE IF NOT EXISTS action_preferences (
+                preference_id TEXT PRIMARY KEY,
+                recipient_email TEXT NOT NULL,
+                preference_key TEXT NOT NULL,
+                preference_value TEXT NOT NULL,
+                source_action_id TEXT,
+                UNIQUE(recipient_email, preference_key),
+                FOREIGN KEY (source_action_id) REFERENCES actions(action_id)
+            );
+
+
+            CREATE TABLE IF NOT EXISTS general_preferences (
+                preference_key TEXT PRIMARY KEY,
+                preference_value TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS summaries (
                 summary_id TEXT PRIMARY KEY,
                 thread_id TEXT NOT NULL,
@@ -92,6 +109,110 @@ class Database:
             ),
         )
         self.conn.commit()
+
+    def update_action(
+        self,
+        action_id: str,
+        *,
+        status: str | None = None,
+        payload: Dict[str, Any] | None = None,
+        result: Dict[str, Any] | None = None,
+    ) -> None:
+        cursor = self.conn.cursor()
+        updates: List[str] = []
+        params: List[Any] = []
+
+        if status is not None:
+            updates.append("status = ?")
+            params.append(status)
+
+        if payload is not None:
+            updates.append("payload = ?")
+            params.append(json.dumps(payload))
+
+        if result is not None:
+            updates.append("result = ?")
+            params.append(json.dumps(result))
+
+        if not updates:
+            return
+
+        sql = f"UPDATE actions SET {', '.join(updates)} WHERE action_id = ?"
+        params.append(action_id)
+        cursor.execute(sql, params)
+        self.conn.commit()
+
+    def upsert_action_preference(
+        self,
+        *,
+        recipient_email: str,
+        preference_key: str,
+        preference_value: str,
+        source_action_id: str | None = None,
+    ) -> None:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO action_preferences (preference_id, recipient_email, preference_key, preference_value, source_action_id)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(recipient_email, preference_key) DO UPDATE SET
+                preference_value = excluded.preference_value,
+                source_action_id = excluded.source_action_id
+            """
+            ,
+            (
+                str(uuid.uuid4()),
+                recipient_email.lower(),
+                preference_key,
+                preference_value,
+                source_action_id,
+            ),
+        )
+        self.conn.commit()
+
+    def fetch_preferences_for_recipient(self, recipient_email: str) -> List[ActionPreference]:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT * FROM action_preferences WHERE recipient_email = ?",
+            (recipient_email.lower(),),
+        )
+        rows = cursor.fetchall()
+        return [
+            ActionPreference(
+                preference_id=row["preference_id"],
+                recipient_email=row["recipient_email"],
+                preference_key=row["preference_key"],
+                preference_value=row["preference_value"],
+                source_action_id=row["source_action_id"],
+            )
+            for row in rows
+        ]
+
+    def upsert_general_preference(
+        self,
+        *,
+        preference_key: str,
+        preference_value: str,
+    ) -> None:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO general_preferences (preference_key, preference_value)
+            VALUES (?, ?)
+            ON CONFLICT(preference_key) DO UPDATE SET
+                preference_value = excluded.preference_value
+            """,
+            (
+                preference_key,
+                preference_value,
+            ),
+        )
+        self.conn.commit()
+
+    def fetch_general_preferences(self) -> Dict[str, str]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT preference_key, preference_value FROM general_preferences")
+        return {row["preference_key"]: row["preference_value"] for row in cursor.fetchall()}
 
     def insert_summary(self, summary: Summary):
         cursor = self.conn.cursor()
@@ -202,3 +323,5 @@ class Database:
             )
             for row in rows
         ]
+
+
