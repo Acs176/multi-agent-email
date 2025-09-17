@@ -3,6 +3,7 @@ from .classifier import EmailClassifierAgent, EmailClassification
 from .summarizer import EmailSummarizerAgent
 from .drafter import EmailDrafterAgent, EmailDraft
 from .scheduler import EmailSchedulerAgent, ProposedEvent
+from .preferences import PreferenceExtractionAgent, PreferenceExtraction
 
 __all__ = [
     "EmailClassifierAgent",
@@ -12,4 +13,6 @@ __all__ = [
     "EmailDraft",
     "EmailSchedulerAgent",
     "ProposedEvent",
+    "PreferenceExtractionAgent",
+    "PreferenceExtraction",
 ]
