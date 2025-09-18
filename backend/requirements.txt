@@ -1,0 +1,6 @@
+pydantic==2.11.9
+pydantic-ai>=0.0.15
+langfuse==3.3.5
+fastapi>=0.110.0
+python-dotenv>=1.0
+uvicorn[standard]>=0.24.0
