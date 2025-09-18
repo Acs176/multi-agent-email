@@ -7,8 +7,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict
 
-from .business.models import Action, Email
-from .storage.db import Database
+from ..business.models import Action, Email
+from ..storage.db import Database
 
 DEFAULT_EMAILS_PATH = "./data/test_emails.json"
 DEFAULT_ACTIONS_PATH = "./data/approved_drafts.json"

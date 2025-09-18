@@ -1,4 +1,4 @@
-"""Preference extraction agent to derive recipient-specific settings."""
+"""Preference extraction agent to derive reusable writing preferences."""
 from __future__ import annotations
 
 import json
@@ -9,7 +9,7 @@ from pydantic_ai import Agent
 from langfuse import observe
 
 
-INSTRUCTIONS = """
+DEFAULT_INSTRUCTIONS = """
 You analyse how a user modified an email draft suggested by another agent.
 Return structured JSON with any inferred preferences for future drafts to the
 same recipient. Only include a field when you can clearly infer a preference.
@@ -31,12 +31,12 @@ class PreferenceExtraction(BaseModel):
 
 
 class PreferenceExtractionAgent:
-    """LLM wrapper that derives recipient preferences from draft edits."""
+    """LLM wrapper that derives writing preferences from structured context."""
 
-    def __init__(self, model: Any) -> None:
+    def __init__(self, model: Any, *, instructions: str = DEFAULT_INSTRUCTIONS) -> None:
         self._agent = Agent(
             model=model,
-            instructions=INSTRUCTIONS,
+            instructions=instructions,
             output_type=PreferenceExtraction,
             instrument=True,
         )
@@ -44,6 +44,13 @@ class PreferenceExtractionAgent:
     @observe()
     def extract(self, *, original_payload: Dict[str, Any], updated_payload: Dict[str, Any]) -> PreferenceExtraction:
         prompt = self._build_prompt(original_payload=original_payload, updated_payload=updated_payload)
+        return self._run(prompt)
+
+    def run_prompt(self, prompt: str) -> PreferenceExtraction:
+        """Run the underlying agent against a pre-built prompt."""
+        return self._run(prompt)
+
+    def _run(self, prompt: str) -> PreferenceExtraction:
         return self._agent.run_sync(prompt).output
 
     def _build_prompt(self, *, original_payload: Dict[str, Any], updated_payload: Dict[str, Any]) -> str:

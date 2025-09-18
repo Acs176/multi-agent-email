@@ -152,11 +152,11 @@ def _record_preferences_from_modification(
             )
         return
 
-    recipients = _extract_recipient_emails(updated_payload.get("to"))
-    if not recipients:
+    to_recipients = _extract_recipient_emails(updated_payload.get("to"))
+    if not to_recipients:
         return
 
-    for recipient in recipients:
+    for recipient in to_recipients:
         for key, value in preferences.items():
             db.upsert_action_preference(
                 recipient_email=recipient,
@@ -189,3 +189,5 @@ def _extract_recipient_emails(raw_recipients: Any) -> List[str]:
 
     emails = [candidate.lower() for candidate in candidates if candidate]
     return emails
+
+
