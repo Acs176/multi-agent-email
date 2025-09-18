@@ -102,17 +102,34 @@ class Orchestrator:
             },
         }
 
+    @observe()
     def _build_drafting_preferences(self, thread: Sequence[Email]) -> DraftingPreferences | None:
         general_preferences = self.db.fetch_general_preferences()
         preferences = DraftingPreferences.from_general_preferences(general_preferences)
 
         recipient_emails = self._infer_reply_recipients(thread)
         logger.debug(f"recipient emails: {recipient_emails}")
+        formal_tone_value: str | None = None ## Formal >> casual
         for email_address in recipient_emails:
             recipient_preferences = self.db.fetch_preferences_for_recipient(email_address)
-            if recipient_preferences:
-                logger.debug(f"{email_address} : {recipient_preferences}")
-                preferences.apply_action_preferences(recipient_preferences)
+            if not recipient_preferences:
+                continue
+
+            logger.debug(f"{email_address} : {recipient_preferences}")
+            preferences.apply_action_preferences(recipient_preferences)
+
+            if formal_tone_value is None:
+                ## check if this recipient has formal tone preference
+                tone_pref = next(
+                    (p for p in recipient_preferences if p.preference_key == "tone"),
+                    None,
+                )
+                if tone_pref and "formal" in tone_pref.preference_value.lower():
+                    formal_tone_value = tone_pref.preference_value
+                    logger.debug(f"Formal tone preference will be applied because of {email_address}")
+
+        if formal_tone_value:
+            preferences.tone = formal_tone_value
 
         return None if preferences.is_empty() else preferences
 
@@ -129,6 +146,3 @@ class Orchestrator:
         )
 
         return list(dict.fromkeys(addr.lower() for addr in sources if addr))
-
-
-
