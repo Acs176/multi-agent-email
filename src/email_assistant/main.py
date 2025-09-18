@@ -21,19 +21,21 @@ from .storage.db import Database
 from .business.models import Email
 from .orchestrator import Orchestrator
 from .user_actions import review_actions
+from .logging_utils import logs_handler
 
 Agent.instrument_all()
 
 
 def main() -> None:
     load_dotenv()
-
+    logs_handler.setup_logging(level="debug")
+    logger = logs_handler.get_logger()
     ## tracing setup
     langfuse = get_client()
     if langfuse.auth_check():
-        print("Langfuse client authenticated and ready!")
+        logger.debug("Langfuse client authenticated and ready!")
     else:
-        print("Langfuse authentication failed")
+        logger.debug("Langfuse authentication failed")
 
     model_name = "gpt-4o"
     api_key = os.getenv("OPENAI_API_KEY")
@@ -56,12 +58,12 @@ def main() -> None:
         to=["alice.johnson@example.com", "diego.martinez@example.com"],
         cc=["finance@example.com", "product@example.com"],
         subject="Re: Project Launch - Kickoff Prep",
-        body="Looks solid now! Finance confirmed the numbers on slide 6. I suggest we trim slide 9 a bit -- too much detail for kickoff. Otherwise, I think we're ready to present tomorrow. Please let me know if you're available.\n\n- Priya",
+        body="Looks solid now! Finance confirmed the numbers on slide 6. I suggest we trim slide 9 a bit -- too much detail for kickoff. Otherwise, I think we're ready to present tomorrow. Please let me know if you're available. Please respond.\n\n- Priya",
     )
 
     result = orchestrator.process_new_email(sample_email)
-    print("Classification:", result["classification"])
-    print("Summary:", result["summary"])
+    logger.info("Classification: %s", result["classification"])
+    logger.info("Summary: %s", result["summary"])
     
     preference_extractor = PreferenceExtractionAgent(model)
     review_actions(
@@ -70,7 +72,7 @@ def main() -> None:
         preference_extractor=preference_extractor,
     )
 
-    print(db.fetch_general_preferences())
+    logger.debug(db.fetch_general_preferences())
 
 
 if __name__ == "__main__":

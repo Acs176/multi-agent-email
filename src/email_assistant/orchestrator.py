@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict
+from itertools import chain
+from typing import Any, Dict, Sequence
 from langfuse import observe, get_client
 
 from .agents import (
@@ -14,9 +15,11 @@ from .agents import (
     EmailSummarizerAgent,
     ProposedEvent,
 )
-from .business.models import Action, Email, Summary
+from .business.models import Action, DraftingPreferences, Email, Summary
 from .storage.db import Database
+from .logging_utils import logs_handler
 
+logger = logs_handler.get_logger()
 
 class Orchestrator:
     def __init__(
@@ -59,8 +62,14 @@ class Orchestrator:
             )
             self.db.insert_summary(summary_record)
 
+        draft_preferences: DraftingPreferences | None = None
         if decisions["needs_draft"]:
-            draft: EmailDraft = self.drafter.draft(thread)
+            draft_preferences = self._build_drafting_preferences(thread)
+            logger.debug(f"Preferences applying to this email: {draft_preferences}")
+            draft: EmailDraft = self.drafter.draft(
+                thread,
+                preferences=draft_preferences,
+            )
             action = Action(
                 action_id=str(uuid.uuid4()),
                 mail_id=email.mail_id,
@@ -92,3 +101,34 @@ class Orchestrator:
                 "decisions": decisions,
             },
         }
+
+    def _build_drafting_preferences(self, thread: Sequence[Email]) -> DraftingPreferences | None:
+        general_preferences = self.db.fetch_general_preferences()
+        preferences = DraftingPreferences.from_general_preferences(general_preferences)
+
+        recipient_emails = self._infer_reply_recipients(thread)
+        logger.debug(f"recipient emails: {recipient_emails}")
+        for email_address in recipient_emails:
+            recipient_preferences = self.db.fetch_preferences_for_recipient(email_address)
+            if recipient_preferences:
+                logger.debug(f"{email_address} : {recipient_preferences}")
+                preferences.apply_action_preferences(recipient_preferences)
+
+        return None if preferences.is_empty() else preferences
+
+    @staticmethod
+    def _infer_reply_recipients(thread: Sequence[Email]) -> list[str]:
+        if not thread:
+            return []
+
+        latest = thread[-1]
+        sources = chain(
+            [latest.from_email] if latest.from_email else [],
+            latest.to or [],
+            latest.cc or [],
+        )
+
+        return list(dict.fromkeys(addr.lower() for addr in sources if addr))
+
+
+
