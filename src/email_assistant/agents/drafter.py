@@ -11,12 +11,12 @@ from ..business.models import DraftingPreferences, Email
 from .utils import _format_thread
 
 INSTRUCTIONS = """
-You write helpful reply drafts for incoming emails.
+You write helpful reply drafts for incoming emails. Do not add placeholders or extra comments, your draft will be sent directly.
 Assume the last message in the thread is the one that needs a response.
 If a "User writing preferences" section is provided, incorporate every preference faithfully.
 Reply with JSON containing only these keys:
 {
-  "to": string of comma-separated recipients,
+  "to": string of comma-separated recipients (this should include the sender of the email you're responding to),
   "subject": subject line for the reply,
   "body": body text of the reply email
 }
