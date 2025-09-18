@@ -6,11 +6,14 @@ import json
 import uuid
 from ..business.models import Email, Action, Summary, ActionPreference
 import datetime
-DB_PATH = "./assistant.db"
+DB_PATH = Path("assistant.db")
 
 class Database:
-    def __init__(self, db_path: Path = DB_PATH):
-        self.conn = sqlite3.connect(db_path)
+    def __init__(self, db_path: Path | str = DB_PATH, *, check_same_thread: bool | None = None):
+        connect_kwargs = {}
+        if check_same_thread is not None:
+            connect_kwargs['check_same_thread'] = check_same_thread
+        self.conn = sqlite3.connect(str(db_path), **connect_kwargs)
         self.conn.row_factory = sqlite3.Row
         self._create_tables()
 
