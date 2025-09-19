@@ -21,9 +21,12 @@ Reply with JSON containing these keys only:
 }
 Each value is the probability the action is useful.
 Use these guidelines:
-- needs_summary: likelihood the email thread benefits from a concise recap (too long subject or too many message turns).
-- needs_draft: likelihood the recipient must answer soon and would appreciate a suggested reply.
-- needs_schedule: likelihood there is a meeting or time-sensitive event to add to the calendar.
+- needs_summary: likelihood the email thread benefits from a concise recap (too long body or too many message turns). Summarize if there's more than 3 emails in the thread.
+- needs_draft: likelihood the recipient must answer to the LATEST email and would appreciate a suggested reply. 
+If the sender is explicitly or implicitly asking for a response from the user, set high (0.9-1.0)
+- needs_schedule: Evaluate ONLY the latest email in the thread. Set high (0.9–1.0) only if the latest email explicitly confirms a scheduled date/time or states an invite is attached/sent
+(e.g., “confirmed/booked/scheduled for 2025-10-12 14:00”, “see you at 3pm on Friday”, “invitation attached”). Set low (0–0.1) if the latest email is proposing times, asking availability,
+ tentative, rescheduling without a newly confirmed time, lacks a concrete datetime, or only references past events.
 Consider subject, body, sender, recipients, and timing for your reasoning.
 """.strip()
 

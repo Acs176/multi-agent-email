@@ -515,7 +515,7 @@ func (m *appModel) renderSummaryContent() string {
 }
 
 func renderClassification(c ClassificationPayload) string {
-	if c.Probabilities == nil || len(c.Probabilities) == 0 {
+	if len(c.Probabilities) == 0 {
 		return "No classification data."
 	}
 	keys := mapsKeys(c.Probabilities)
@@ -695,44 +695,71 @@ func modifyActionCmd(
 }
 
 func buildSampleEmails() []Email {
-	base := time.Now().UnixNano()
+
 	return []Email{
-		buildSampleEmail(),
 		{
-			MailID:    fmt.Sprintf("mail-%d", base+1),
-			ThreadID:  "thread-budget-review",
-			FromName:  "Jamal Carter",
-			FromEmail: "ops@example.com",
+			MailID:    "mail-1",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Jamie Lee",
+			FromEmail: "jamie.lee@example.com",
 			To: []string{
-				"alice.johnson@example.com",
+				"user@example.com",
 			},
-			CC: []string{
-				"finance@example.com",
-			},
-			Subject: "Budget review follow-up",
+			CC:      []string{},
+			Subject: "Team Lunch Catch-Up?",
 			Body: strings.Join([]string{
-				"Following up on the revised allocations you proposed yesterday.",
-				"Can you confirm that product and design each signed off on the new totals?",
-				"I'd like to lock the budget by end of day.",
+				"Hi Adrian,\n\nIt's been a while since the Mobile team grabbed lunch together. Are you free next week for a quick catch-up?",
+				"I was thinking something casual near the office. Let me know what days work and I'll loop in Taylor to help lock it down.\n\nThanks!\nJamie",
 			}, " "),
 		},
 		{
-			MailID:    fmt.Sprintf("mail-%d", base+2),
-			ThreadID:  "thread-customer-intro",
-			FromName:  "Dana Patel",
-			FromEmail: "success@example.com",
+			MailID:    "mail-1.5",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Jamie Lee",
+			FromEmail: "jamie.lee@example.com",
 			To: []string{
-				"alice.johnson@example.com",
-				"diego.martinez@example.com",
+				"user@example.com",
+			},
+			CC:      []string{},
+			Subject: "Re: Team Lunch Catch-Up?",
+			Body: strings.Join([]string{
+				"Hi Adrian,\n\nI can't seem to be able to get a hold of Taylor.",
+				"Please send him an email and inform him of your availability.",
+				"His address is taylor.brooks@example.com.\n\nThanks! Jamie",
+			}, " "),
+		},
+		{
+			MailID:    "mail-2",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Taylor Brooks",
+			FromEmail: "taylor.brooks@example.com",
+			To: []string{
+				"user@example.com",
+				"jamie.lee@example.com",
+			},
+			CC:      []string{},
+			Subject: "Re: Team Lunch Catch-Up?",
+			Body: strings.Join([]string{
+				"Hi both,\n\nGreat! I can hold a 45-minute slot on Tuesday at 12:00 PM.",
+				"I can't wait to see you guys!\n\nThanks,\nTaylor",
+			}, " "),
+		},
+		{
+			MailID:    "mail-3",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Jamie Lee",
+			FromEmail: "jamie.lee@example.com",
+			To: []string{
+				"taylor.brooks@example.com",
 			},
 			CC: []string{
-				"support@example.com",
+				"user@example.com",
 			},
-			Subject: "Customer onboarding prep",
+			Subject: "Re: Team Lunch Catch-Up?",
 			Body: strings.Join([]string{
-				"Client is requesting a consolidated onboarding checklist.",
-				"Can we share the latest runbook and note who's covering each section?",
-				"They're hoping to kick off first thing Monday.",
+				"Alright guys, we will go to La Tagliatella.",
+				"Please take a look at the menu and respond to me with what you want so I can make the reservation before the end of the day!.",
+				"\n\nThanks!\nJamie",
 			}, " "),
 		},
 	}

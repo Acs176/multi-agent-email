@@ -2,11 +2,19 @@
 from __future__ import annotations
 
 import copy
+import datetime
 import json
-from typing import Any, Dict, List
+import logging
+import os
+import uuid
+from typing import Any, Dict, List, Optional, Tuple
 
 from .agents.preferences import PreferenceExtraction, PreferenceExtractionAgent
+from .business.models import Email
 from .storage.db import Database
+
+
+logger = logging.getLogger(__name__)
 
 
 def _prompt_payload_update(default_payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -41,6 +49,7 @@ def _prompt_apply_to_general() -> bool:
 def approve_action(action: Dict[str, Any], db: Database) -> Dict[str, Any]:
     db.update_action(action["action_id"], status="executed")
     action["status"] = "executed"
+    _store_sent_email(action=action, db=db, payload=action.get("payload") or {})
     return action
 
 
@@ -66,6 +75,7 @@ def modify_action(
     )
     action["payload"] = updated_payload
     action["status"] = "executed"
+    _store_sent_email(action=action, db=db, payload=updated_payload)
     _record_preferences_from_modification(
         action=action,
         db=db,
@@ -121,6 +131,76 @@ def review_actions(
     print("\nFinal action statuses:")
     for action in actions:
         print(f" - {action['action_id']}: {action['status']}")
+
+
+def _normalize_recipients(raw: Any) -> List[str]:
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        candidates = raw
+    else:
+        candidates = str(raw).split(",")
+    normalized: List[str] = []
+    for candidate in candidates:
+        address = str(candidate).strip()
+        if address:
+            normalized.append(address)
+    return normalized
+
+def _resolve_sender_identity() -> Tuple[str, str]:
+    name = os.getenv("USER_EMAIL", "example@example.com")
+    configured_email = os.getenv("USER_NAME", "Adrian")
+    if configured_email:
+        return name, configured_email
+
+
+def _store_sent_email(*, action: Dict[str, Any], db: Database, payload: Dict[str, Any]) -> None:
+    if action.get("type") != "send_email":
+        return
+
+    payload = payload or {}
+    if not isinstance(payload, dict):
+        logger.warning("Ignoring non-dict payload for action %s", action.get("action_id"))
+        payload = {}
+
+    original_mail_id = action.get("mail_id")
+    if not original_mail_id:
+        return
+
+    original_email = db.fetch_email(original_mail_id)
+    if original_email is None:
+        logger.warning(
+            "Unable to store sent email for action %s: mail %s not found",
+            action.get("action_id"),
+            original_mail_id,
+        )
+        return
+
+    to_recipients = _normalize_recipients(payload.get("to"))
+    cc_recipients = _normalize_recipients(payload.get("cc"))
+    subject = payload.get("subject")
+    body = str(payload.get("body", ""))
+    sender_name, sender_email = _resolve_sender_identity()
+
+    sent_email = Email(
+        mail_id=str(uuid.uuid4()),
+        external_id=None,
+        thread_id=original_email.thread_id,
+        from_name=sender_name,
+        from_email=sender_email,
+        to=to_recipients,
+        cc=cc_recipients,
+        subject=subject,
+        body=body,
+        received_at=datetime.datetime.now(datetime.timezone.utc),
+    )
+
+    try:
+        db.insert_email(sent_email)
+    except Exception as exc:
+        logger.exception("Failed to store sent email for action %s: %s", action.get("action_id"), exc)
+
+
 
 
 def _record_preferences_from_modification(

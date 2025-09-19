@@ -1,6 +1,6 @@
 """Email draft generation agent built on PydanticAI."""
 from __future__ import annotations
-
+import os
 from typing import Any, Sequence
 
 from pydantic import BaseModel, Field
@@ -23,6 +23,9 @@ Reply with JSON containing only these keys:
 Keep the tone polite and concise unless instructed otherwise by the preferences.
 """.strip()
 
+USER_NAME = os.getenv("USER_NAME", "Adrian")
+USER_EMAIL = os.getenv("USER_EMAIL", "example@example.com")
+
 
 def _build_agent_input(
     thread: Sequence[Email],
@@ -37,7 +40,8 @@ def _build_agent_input(
         return thread_block
 
     preferences_block = "\n".join(f"- {line}" for line in preference_lines)
-    return f"{thread_block}\n\nUser writing preferences:\n{preferences_block}"
+    user_info = f"User info:\n- Name: {USER_NAME}\n- Email: {USER_EMAIL}"
+    return f"{thread_block}\n\nUser writing preferences:\n{preferences_block}\n{user_info}"
 
 
 class EmailDraft(BaseModel):
