@@ -91,16 +91,7 @@ def get_preference_extractor(request: Request) -> PreferenceExtractionAgent | No
 
 @app.on_event("startup")
 async def startup() -> None:
-    load_dotenv()
-    logs_handler.setup_logging(level=os.getenv("LOG_LEVEL", "info"))
     logger = logs_handler.get_logger()
-
-    langfuse = get_client()
-    if langfuse.auth_check():
-        logger.debug("Langfuse client authenticated and ready!")
-    else:
-        logger.warning("Langfuse authentication failed")
-
     model_name = os.getenv("OPENAI_MODEL", "gpt-4o")
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
