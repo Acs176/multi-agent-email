@@ -1,9 +1,10 @@
 """Coordinates the different agents that act on incoming emails."""
 from __future__ import annotations
 
+import asyncio
 import uuid
 from itertools import chain
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Sequence, Awaitable
 from langfuse import observe, get_client
 
 from .agents import (
@@ -20,6 +21,7 @@ from .storage.db import Database
 from .logging_utils import logs_handler
 
 logger = logs_handler.get_logger()
+
 
 class Orchestrator:
     def __init__(
@@ -38,7 +40,7 @@ class Orchestrator:
         self.summarizer = summarizer
 
     @observe()
-    def process_new_email(self, email: Email) -> Dict[str, Any]:
+    async def process_new_email(self, email: Email) -> Dict[str, Any]:
         langfuse = get_client()
         session_id = uuid.uuid4()
         langfuse.update_current_trace(session_id=f"{session_id}")
@@ -46,14 +48,35 @@ class Orchestrator:
         self.db.insert_email(email)
         thread = self.db.fetch_emails_for_thread(email.thread_id)
         print(f"fetched {len(thread)} emails")
-        classification: EmailClassification = self.classifier.classify(thread)
+        classification: EmailClassification = await self.classifier.classify_async(thread)
         decisions = self.classifier.decisions(classification)
 
-        proposed_actions = []
-        summary_text = None
+        proposed_actions: list[Dict[str, Any]] = []
+        summary_text: str | None = None
 
+        agent_coroutines: Dict[str, Awaitable[Any]] = {}
         if decisions["needs_summary"]:
-            summary = self.summarizer.summarize(thread)
+            agent_coroutines["summary"] = self.summarizer.summarize_async(thread)
+
+        draft_preferences: DraftingPreferences | None = None
+        if decisions["needs_draft"]:
+            draft_preferences = self._build_drafting_preferences(thread)
+            logger.debug(f"Preferences applying to this email: {draft_preferences}")
+            agent_coroutines["draft"] = self.drafter.draft_async(
+                thread,
+                preferences=draft_preferences,
+            )
+
+        if decisions["needs_schedule"]:
+            agent_coroutines["schedule"] = self.scheduler.propose_event_async(thread)
+
+        agent_results: Dict[str, Any] = {}
+        if agent_coroutines:
+            completed = await asyncio.gather(*agent_coroutines.values())
+            agent_results = dict(zip(agent_coroutines.keys(), completed))
+
+        summary = agent_results.get("summary")
+        if summary is not None:
             summary_text = summary.summary
             summary_record = Summary(
                 summary_id=str(uuid.uuid4()),
@@ -62,14 +85,8 @@ class Orchestrator:
             )
             self.db.insert_summary(summary_record)
 
-        draft_preferences: DraftingPreferences | None = None
-        if decisions["needs_draft"]:
-            draft_preferences = self._build_drafting_preferences(thread)
-            logger.debug(f"Preferences applying to this email: {draft_preferences}")
-            draft: EmailDraft = self.drafter.draft(
-                thread,
-                preferences=draft_preferences,
-            )
+        draft: EmailDraft | None = agent_results.get("draft")
+        if draft is not None:
             action = Action(
                 action_id=str(uuid.uuid4()),
                 mail_id=email.mail_id,
@@ -80,8 +97,8 @@ class Orchestrator:
             self.db.insert_action(action)
             proposed_actions.append(action.model_dump())
 
-        if decisions["needs_schedule"]:
-            event: ProposedEvent = self.scheduler.propose_event(thread)
+        event: ProposedEvent | None = agent_results.get("schedule")
+        if event is not None:
             action = Action(
                 action_id=str(uuid.uuid4()),
                 mail_id=email.mail_id,
@@ -109,7 +126,7 @@ class Orchestrator:
 
         recipient_emails = self._infer_reply_recipients(thread)
         logger.debug(f"recipient emails: {recipient_emails}")
-        formal_tone_value: str | None = None ## Formal >> casual
+        formal_tone_value: str | None = None  # Formal >> casual
         for email_address in recipient_emails:
             recipient_preferences = self.db.fetch_preferences_for_recipient(email_address)
             if not recipient_preferences:
@@ -119,14 +136,16 @@ class Orchestrator:
             preferences.apply_action_preferences(recipient_preferences)
 
             if formal_tone_value is None:
-                ## check if this recipient has formal tone preference
+                # check if this recipient has formal tone preference
                 tone_pref = next(
                     (p for p in recipient_preferences if p.preference_key == "tone"),
                     None,
                 )
                 if tone_pref and "formal" in tone_pref.preference_value.lower():
                     formal_tone_value = tone_pref.preference_value
-                    logger.debug(f"Formal tone preference will be applied because of {email_address}")
+                    logger.debug(
+                        f"Formal tone preference will be applied because of {email_address}"
+                    )
 
         if formal_tone_value:
             preferences.tone = formal_tone_value

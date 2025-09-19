@@ -1,6 +1,8 @@
 """Command-line entry point for the email assistant."""
 from __future__ import annotations
 
+import asyncio
+
 import argparse
 import logging
 import os
@@ -74,7 +76,7 @@ def run_cli(model: OpenAIChatModel) -> None:
         ),
     )
 
-    result = orchestrator.process_new_email(sample_email)
+    result = asyncio.run(orchestrator.process_new_email(sample_email))
     logger.info("Classification: %s", result["classification"])
     logger.info("Summary: %s", result["summary"])
 
