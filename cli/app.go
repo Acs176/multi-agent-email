@@ -515,7 +515,7 @@ func (m *appModel) renderSummaryContent() string {
 }
 
 func renderClassification(c ClassificationPayload) string {
-	if c.Probabilities == nil || len(c.Probabilities) == 0 {
+	if len(c.Probabilities) == 0 {
 		return "No classification data."
 	}
 	keys := mapsKeys(c.Probabilities)
@@ -713,6 +713,22 @@ func buildSampleEmails() []Email {
 			}, " "),
 		},
 		{
+			MailID:    "mail-1.5",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Jamie Lee",
+			FromEmail: "jamie.lee@example.com",
+			To: []string{
+				"user@example.com",
+			},
+			CC:      []string{},
+			Subject: "Re: Team Lunch Catch-Up?",
+			Body: strings.Join([]string{
+				"Hi Adrian,\n\nI can't seem to be able to get a hold of Taylor.",
+				"Please send him an email and inform him of your availability.",
+				"His address is taylor.brooks@example.com.\n\nThanks! Jamie",
+			}, " "),
+		},
+		{
 			MailID:    "mail-2",
 			ThreadID:  "thread-team-lunch",
 			FromName:  "Taylor Brooks",
@@ -724,8 +740,8 @@ func buildSampleEmails() []Email {
 			CC:      []string{},
 			Subject: "Re: Team Lunch Catch-Up?",
 			Body: strings.Join([]string{
-				"Hi both,\n\nGreat! I can hold a 45-minute slot on either Tuesday at 12:00 PM or Thursday at 12:30 PM.",
-				"Let me know which one you prefer and I'll send the calendar invite.\n\nThanks,\nTaylor",
+				"Hi both,\n\nGreat! I can hold a 45-minute slot on Tuesday at 12:00 PM.",
+				"I can't wait to see you guys!\n\nThanks,\nTaylor",
 			}, " "),
 		},
 		{
@@ -741,24 +757,9 @@ func buildSampleEmails() []Email {
 			},
 			Subject: "Re: Team Lunch Catch-Up?",
 			Body: strings.Join([]string{
-				"Taylor,\n\nLet's go with Tuesday at 12:00 PM. Adrian and I will meet you in the lobby and walk over to Bella's Deli.",
-				"Please send the invite when you have a minute.\n\nThanks!\nJamie",
-			}, " "),
-		},
-		{
-			MailID:    "mail-4",
-			ThreadID:  "thread-team-lunch",
-			FromName:  "Taylor Brooks",
-			FromEmail: "taylor.brooks@example.com",
-			To: []string{
-				"user@example.com",
-				"jamie.lee@example.com",
-			},
-			CC:      []string{},
-			Subject: "Calendar Invite: Tuesday Lunch at Bella's Deli",
-			Body: strings.Join([]string{
-				"Calendar invite sent for Tuesday at 12:00 PM at Bella's Deli.",
-				"See you both then!\n\nTaylor",
+				"Alright guys, we will go to La Tagliatella.",
+				"Please take a look at the menu and respond to me with what you want so I can make the reservation before the end of the day!.",
+				"\n\nThanks!\nJamie",
 			}, " "),
 		},
 	}
