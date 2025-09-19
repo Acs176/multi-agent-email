@@ -41,6 +41,8 @@ Execution metadata is supposed to be stored in the `result` column (Not implemen
 ## Observability & Monitoring
 - **Structured logging.** `logging_utils.LogsHandler` centralises log configuration using the `LOG_LEVEL` environment variable. Logs are emitted with timestamps, levels, and module names for easy ingestion into log pipelines.
 - **Langfuse tracing.** `Agent.instrument_all()` and `@observe` decorators wrap each agent and orchestrator method. Every invocation is captured as a trace with inputs, outputs, and timing metadata.
+![Agent run trace](imgs/trace.png)
+![Latency dashboard](imgs/latency.png)
 - **Trace correlation.** `Orchestrator.process_new_email` seeds a session id so all downstream agent calls for a message share a Langfuse trace, making it easy to inspect a full workflow in the Langfuse UI.
 
 ## Getting Started
