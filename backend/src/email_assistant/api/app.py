@@ -111,7 +111,7 @@ async def startup() -> None:
 async def create_email(
     email: Email, orchestrator: Annotated[Orchestrator, Depends(get_orchestrator)]
 ) -> NewEmailResponse:
-    result = await asyncio.to_thread(orchestrator.process_new_email, email)
+    result = await orchestrator.process_new_email(email)
     return NewEmailResponse.model_validate(result)
 
 
