@@ -695,44 +695,70 @@ func modifyActionCmd(
 }
 
 func buildSampleEmails() []Email {
-	base := time.Now().UnixNano()
+
 	return []Email{
-		buildSampleEmail(),
 		{
-			MailID:    fmt.Sprintf("mail-%d", base+1),
-			ThreadID:  "thread-budget-review",
-			FromName:  "Jamal Carter",
-			FromEmail: "ops@example.com",
+			MailID:    "mail-1",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Jamie Lee",
+			FromEmail: "jamie.lee@example.com",
 			To: []string{
-				"alice.johnson@example.com",
+				"user@example.com",
 			},
-			CC: []string{
-				"finance@example.com",
-			},
-			Subject: "Budget review follow-up",
+			CC:      []string{},
+			Subject: "Team Lunch Catch-Up?",
 			Body: strings.Join([]string{
-				"Following up on the revised allocations you proposed yesterday.",
-				"Can you confirm that product and design each signed off on the new totals?",
-				"I'd like to lock the budget by end of day.",
+				"Hi Adrian,\n\nIt's been a while since the Mobile team grabbed lunch together. Are you free next week for a quick catch-up?",
+				"I was thinking something casual near the office. Let me know what days work and I'll loop in Taylor to help lock it down.\n\nThanks!\nJamie",
 			}, " "),
 		},
 		{
-			MailID:    fmt.Sprintf("mail-%d", base+2),
-			ThreadID:  "thread-customer-intro",
-			FromName:  "Dana Patel",
-			FromEmail: "success@example.com",
+			MailID:    "mail-2",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Taylor Brooks",
+			FromEmail: "taylor.brooks@example.com",
 			To: []string{
-				"alice.johnson@example.com",
-				"diego.martinez@example.com",
+				"user@example.com",
+				"jamie.lee@example.com",
+			},
+			CC:      []string{},
+			Subject: "Re: Team Lunch Catch-Up?",
+			Body: strings.Join([]string{
+				"Hi both,\n\nGreat! I can hold a 45-minute slot on either Tuesday at 12:00 PM or Thursday at 12:30 PM.",
+				"Let me know which one you prefer and I'll send the calendar invite.\n\nThanks,\nTaylor",
+			}, " "),
+		},
+		{
+			MailID:    "mail-3",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Jamie Lee",
+			FromEmail: "jamie.lee@example.com",
+			To: []string{
+				"taylor.brooks@example.com",
 			},
 			CC: []string{
-				"support@example.com",
+				"user@example.com",
 			},
-			Subject: "Customer onboarding prep",
+			Subject: "Re: Team Lunch Catch-Up?",
 			Body: strings.Join([]string{
-				"Client is requesting a consolidated onboarding checklist.",
-				"Can we share the latest runbook and note who's covering each section?",
-				"They're hoping to kick off first thing Monday.",
+				"Taylor,\n\nLet's go with Tuesday at 12:00 PM. Adrian and I will meet you in the lobby and walk over to Bella's Deli.",
+				"Please send the invite when you have a minute.\n\nThanks!\nJamie",
+			}, " "),
+		},
+		{
+			MailID:    "mail-4",
+			ThreadID:  "thread-team-lunch",
+			FromName:  "Taylor Brooks",
+			FromEmail: "taylor.brooks@example.com",
+			To: []string{
+				"user@example.com",
+				"jamie.lee@example.com",
+			},
+			CC:      []string{},
+			Subject: "Calendar Invite: Tuesday Lunch at Bella's Deli",
+			Body: strings.Join([]string{
+				"Calendar invite sent for Tuesday at 12:00 PM at Bella's Deli.",
+				"See you both then!\n\nTaylor",
 			}, " "),
 		},
 	}

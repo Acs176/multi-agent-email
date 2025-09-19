@@ -22,7 +22,7 @@ Reply with JSON containing these keys only:
 Each value is the probability the action is useful.
 Use these guidelines:
 - needs_summary: likelihood the email thread benefits from a concise recap (too long subject or too many message turns).
-- needs_draft: likelihood the recipient must answer soon and would appreciate a suggested reply.
+- needs_draft: likelihood the recipient must answer to the email and would appreciate a suggested reply.
 - needs_schedule: likelihood there is a meeting or time-sensitive event to add to the calendar.
 Consider subject, body, sender, recipients, and timing for your reasoning.
 """.strip()
