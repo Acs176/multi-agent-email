@@ -4,6 +4,7 @@ This repo contains a multi-agent application that processes incoming mail, produ
 - Multi-agent pipeline for classification, summarisation, drafting, scheduling, and preference extraction.
 - FastAPI backend that exposes the orchestration workflow as a simple REST API.
 - Bubble Tea terminal client that lets you preview threads, review agent output, and approve or edit actions.
+- Conversational agent that can answer email questions, generate drafts, and propose events via existing tools.
 - SQLite-backed memory that retains message history, generated artefacts, and user editing patterns.
 - Built-in observability via structured logging and Langfuse traces for every agent invocation.
 
@@ -20,18 +21,22 @@ All agents are implemented with `pydantic_ai.Agent` and instrumented for tracing
 - `EmailSummarizerAgent` produces a thread recap that is contextualised with the configured user's environment variables (`USER_NAME`, `USER_EMAIL`).
 - `EmailDrafterAgent` generates reply drafts, optionally conditioned on stored drafting preferences and inferred tone.
 - `EmailSchedulerAgent` proposes structured follow-up events with timestamp and supporting notes.
+- `EmailConversationAgent` runs an interactive chat that surfaces relevant emails via vector search and can invoke the drafter or scheduler as tools.
 - `PreferenceExtractionAgent` analyses user edits to drafts and derives reusable writing preferences that can be applied globally or to specific recipients.
 
 ### Orchestration Flow
-![Flow diagram](imgs/flow_diag.png)
 1. The `/new_email` endpoint persists the message, rebuilds the thread, and runs the classifier.
 2. The orchestrator spins up the relevant agents concurrently (summary, draft, scheduler) depending on classifier decisions.
 3. Generated artefacts are normalised into `Action` records, stored in the database, and returned to the caller alongside probabilities and decisions.
 4. User endpoints (`/action/approve`, `/action/reject`, `/action/modify`) update the stored action state, capture execution results, and optionally extract preference information for modified drafts.
 5. Modified preferences are fed into subsequent draft generations via `_build_drafting_preferences`, closing the learning loop.
+![Flow diagram - backend](imgs/flow_backend.png)
+6. The `EmailConversationAgent` showcases the use of RAG style retrieval and tool-calling, though it runs independently from the orchestrator backend, through a standalone script.
+![Flow diagram - conversational script](imgs/flow_conversation.png)
 
 ## Memory Strategy
 - **Thread storage.** Every inbound email is written to the `emails` table keyed also by `thread_id`, enabling reconstruction of conversation context for agent runs and summaries.
+- **Vector index.** Email embeddings are stored in a FAISS index so the conversation agent can run similarity search. (Only used by the EmailConversationAgent)
 - **Action storage.** Proposed drafts and calendar events are tracked in the `actions` table with status transitions (`pending`, `executed`, `rejected`, etc.).
 Execution metadata is supposed to be stored in the `result` column (Not implemented).
 - **Summaries.** Generated summaries are stored in the `summaries` table. The idea was to fetch these summaries to avoid feeding whole threads (not implemented in the end).
@@ -104,6 +109,10 @@ cd cli
 go run . --host localhost --port 8000
 ```
 The client loads sample threads, submits them to the backend, and guides you through reviewing summaries, classifications, and proposed actions. Approving or editing actions will update the SQLite state and feed new preferences back into the system.
+
+### Conversation CLI
+Run `python -m src.email_assistant.scripts.chat_loop` from the `backend/` directory to start an interactive session.
+The loop feeds user messages to the `EmailConversationAgent`, which uses FAISS-backed similarity search to fetch relevant mails, and can call the drafter or scheduler tools when you ask for a reply or meeting.
 
 ## Project Structure
 - `backend/src/email_assistant/api`: FastAPI routes and dependency wiring.

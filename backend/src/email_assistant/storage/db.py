@@ -1,23 +1,41 @@
+
 # src/storage/db.py
 import sqlite3
 from pathlib import Path
 from typing import Any, Dict, Optional, List
 import json
 import uuid
-from ..business.models import Email, Action, Summary, ActionPreference
+import logging
 import datetime
+
+from ..business.models import Email, Action, Summary, ActionPreference
+from .vector_store import EmailVectorStore
+
+logger = logging.getLogger(__name__)
 DB_PATH = Path("assistant.db")
 
+
 class Database:
-    def __init__(self, db_path: Path | str = DB_PATH, *, check_same_thread: bool | None = None):
-        connect_kwargs = {}
+    def __init__(
+        self,
+        db_path: Path | str = DB_PATH,
+        *,
+        vector_store: EmailVectorStore | None = None,
+        auto_index: bool = True,
+        check_same_thread: bool | None = None,
+    ) -> None:
+        connect_kwargs: Dict[str, Any] = {}
         if check_same_thread is not None:
-            connect_kwargs['check_same_thread'] = check_same_thread
+            connect_kwargs["check_same_thread"] = check_same_thread
         self.conn = sqlite3.connect(str(db_path), **connect_kwargs)
         self.conn.row_factory = sqlite3.Row
+        self._vector_store = vector_store
+        self._auto_index = auto_index
         self._create_tables()
+        if self._vector_store is not None and self._auto_index:
+            self._initialise_vector_store()
 
-    def _create_tables(self):
+    def _create_tables(self) -> None:
         cursor = self.conn.cursor()
         cursor.executescript(
             """
@@ -41,11 +59,8 @@ class Database:
                 status TEXT NOT NULL CHECK (status IN ('pending','confirmed','rejected','modified','executed','failed')),
                 payload JSON NOT NULL,
                 result JSON,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (mail_id) REFERENCES emails(mail_id)
             );
-
 
             CREATE TABLE IF NOT EXISTS action_preferences (
                 preference_id TEXT PRIMARY KEY,
@@ -57,11 +72,11 @@ class Database:
                 FOREIGN KEY (source_action_id) REFERENCES actions(action_id)
             );
 
-
             CREATE TABLE IF NOT EXISTS general_preferences (
                 preference_key TEXT PRIMARY KEY,
                 preference_value TEXT NOT NULL
             );
+
             CREATE TABLE IF NOT EXISTS summaries (
                 summary_id TEXT PRIMARY KEY,
                 thread_id TEXT NOT NULL,
@@ -72,8 +87,22 @@ class Database:
         )
         self.conn.commit()
 
-    # ---------- Insert helpers ----------
-    def insert_email(self, email: Email):
+    def _initialise_vector_store(self) -> None:
+        if self._vector_store is None:
+            return
+        emails = self._load_all_emails()
+        self._vector_store.rebuild(emails)
+
+    def _load_all_emails(self) -> List[Email]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM emails ORDER BY received_at ASC")
+        rows = cursor.fetchall()
+        return [self._row_to_email(row) for row in rows]
+
+    def fetch_all_emails(self) -> List[Email]:
+        return self._load_all_emails()
+
+    def insert_email(self, email: Email) -> None:
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -94,8 +123,17 @@ class Database:
             ),
         )
         self.conn.commit()
+        self._notify_vector_store(email)
 
-    def insert_action(self, action: Action):
+    def _notify_vector_store(self, email: Email) -> None:
+        if self._vector_store is None:
+            return
+        try:
+            self._vector_store.add_email(email)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("Failed to update vector store for %s: %s", email.mail_id, exc)
+
+    def insert_action(self, action: Action) -> None:
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -151,18 +189,19 @@ class Database:
         recipient_email: str,
         preference_key: str,
         preference_value: str,
-        source_action_id: str | None = None,
+        source_action_id: Optional[str] = None,
     ) -> None:
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            INSERT INTO action_preferences (preference_id, recipient_email, preference_key, preference_value, source_action_id)
+            INSERT INTO action_preferences (
+                preference_id, recipient_email, preference_key, preference_value, source_action_id
+            )
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(recipient_email, preference_key) DO UPDATE SET
                 preference_value = excluded.preference_value,
                 source_action_id = excluded.source_action_id
-            """
-            ,
+            """,
             (
                 str(uuid.uuid4()),
                 recipient_email.lower(),
@@ -217,10 +256,8 @@ class Database:
         cursor.execute("SELECT preference_key, preference_value FROM general_preferences")
         return {row["preference_key"]: row["preference_value"] for row in cursor.fetchall()}
 
-    def insert_summary(self, summary: Summary):
+    def insert_summary(self, summary: Summary) -> None:
         cursor = self.conn.cursor()
-
-        # Check if the thread exists in emails
         cursor.execute(
             "SELECT 1 FROM emails WHERE thread_id = ? LIMIT 1",
             (summary.thread_id,),
@@ -242,51 +279,29 @@ class Database:
         )
         self.conn.commit()
 
-    # ---------- Fetch helpers ----------
     def fetch_email(self, mail_id: str) -> Optional[Email]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM emails WHERE mail_id = ?", (mail_id,))
         row = cursor.fetchone()
         if not row:
             return None
-        return Email(
-            mail_id=row["mail_id"],
-            external_id=row["external_id"],
-            thread_id=row["thread_id"],
-            from_name=row["from_name"],
-            from_email=row["from_email"],
-            to=json.loads(row["to"]),
-            cc=json.loads(row["cc"]),
-            subject=row["subject"],
-            body=row["body"],
-            received_at=datetime.datetime.fromisoformat(row["received_at"]),
-        )
+        return self._row_to_email(row)
 
     def fetch_emails_for_thread(self, thread_id: str) -> List[Email]:
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT * FROM emails "
-            "WHERE thread_id = ? "
-            "ORDER BY received_at ASC",
+            "SELECT * FROM emails WHERE thread_id = ? ORDER BY received_at ASC",
             (thread_id,),
         )
         rows = cursor.fetchall()
-        return [
-            Email(
-                mail_id=row["mail_id"],
-                external_id=row["external_id"],
-                thread_id=row["thread_id"],
-                from_name=row["from_name"],
-                from_email=row["from_email"],
-                to=json.loads(row["to"]),
-                cc=json.loads(row["cc"]),
-                subject=row["subject"],
-                body=row["body"],
-                received_at=datetime.datetime.fromisoformat(row["received_at"]),
-            )
-            for row in rows
-        ]
-    
+        return [self._row_to_email(row) for row in rows]
+
+    def fetch_thread_by_mail_id(self, mail_id: str) -> List[Email]:
+        email = self.fetch_email(mail_id)
+        if email is None:
+            return []
+        return self.fetch_emails_for_thread(email.thread_id)
+
     def fetch_action(self, action_id: str) -> Optional[Action]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,))
@@ -327,4 +342,17 @@ class Database:
             for row in rows
         ]
 
-
+    @staticmethod
+    def _row_to_email(row: sqlite3.Row) -> Email:
+        return Email(
+            mail_id=row["mail_id"],
+            external_id=row["external_id"],
+            thread_id=row["thread_id"],
+            from_name=row["from_name"],
+            from_email=row["from_email"],
+            to=json.loads(row["to"]) if row["to"] else [],
+            cc=json.loads(row["cc"]) if row["cc"] else [],
+            subject=row["subject"],
+            body=row["body"],
+            received_at=datetime.datetime.fromisoformat(row["received_at"]),
+        )
