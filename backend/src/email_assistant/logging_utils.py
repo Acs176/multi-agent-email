@@ -57,7 +57,6 @@ class LogsHandler:
     def get_logger(self, name: str = None) -> logging.Logger:
         """Return a module logger (does not configure handlers)."""
         logger = logging.getLogger(name if name else "email_assistant")
-        print(f"LOG LEVEL {self.log_level}")
         logger.setLevel(self.log_level)  ## making sure
         return logger
 

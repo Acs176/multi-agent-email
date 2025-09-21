@@ -58,7 +58,6 @@ class Orchestrator:
         if decisions["needs_summary"]:
             agent_coroutines["summary"] = self.summarizer.summarize_async(thread)
 
-        draft_preferences: DraftingPreferences | None = None
         if decisions["needs_draft"]:
             draft_preferences = self._build_drafting_preferences(thread)
             logger.debug(f"Preferences applying to this email: {draft_preferences}")

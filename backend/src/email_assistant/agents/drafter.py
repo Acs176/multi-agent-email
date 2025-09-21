@@ -31,16 +31,16 @@ def _build_agent_input(
     thread: Sequence[Email],
     preferences: DraftingPreferences | None,
 ) -> str:
+    user_info = f"User info:\n- Name: {USER_NAME}\n- Email: {USER_EMAIL}"
     thread_block = _format_thread(thread)
     if preferences is None or preferences.is_empty():
-        return thread_block
+        return f"{thread_block}\n{user_info}"
 
     preference_lines = preferences.to_prompt_lines()
     if not preference_lines:
-        return thread_block
+        return f"{thread_block}\n{user_info}"
 
     preferences_block = "\n".join(f"- {line}" for line in preference_lines)
-    user_info = f"User info:\n- Name: {USER_NAME}\n- Email: {USER_EMAIL}"
     return f"{thread_block}\n\nUser writing preferences:\n{preferences_block}\n{user_info}"
 
 

@@ -10,7 +10,7 @@ import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 from .agents.preferences import PreferenceExtraction, PreferenceExtractionAgent
-from .business.models import Email
+from .business.models import Email, Action
 from .storage.db import Database
 
 
@@ -46,35 +46,35 @@ def _prompt_apply_to_general() -> bool:
         print("Please answer 'y' or 'n'.")
 
 
-def approve_action(action: Dict[str, Any], db: Database) -> Dict[str, Any]:
-    db.update_action(action["action_id"], status="executed")
-    action["status"] = "executed"
-    _store_sent_email(action=action, db=db, payload=action.get("payload") or {})
+def approve_action(action: Action, db: Database) -> Action:
+    db.update_action(action.action_id, status="executed")
+    action.status = "executed"
+    _store_sent_email(action=action, db=db, payload=action.payload or {})
     return action
 
 
-def reject_action(action: Dict[str, Any], db: Database) -> Dict[str, Any]:
-    db.update_action(action["action_id"], status="rejected")
-    action["status"] = "rejected"
+def reject_action(action: Action, db: Database) -> Action:
+    db.update_action(action.action_id, status="rejected")
+    action.status = "rejected"
     return action
 
 
 def modify_action(
-    action: Dict[str, Any],
+    action: Action,
     db: Database,
     updated_payload: Dict[str, Any],
     *,
     original_payload: Dict[str, Any],
     preference_extractor: PreferenceExtractionAgent | None = None,
     apply_to_general_preferences: bool = False,
-) -> Dict[str, Any]:
+) -> Action:
     db.update_action(
-        action_id=action["action_id"],
+        action_id=action.action_id,
         status="executed",
         payload=updated_payload,
     )
-    action["payload"] = updated_payload
-    action["status"] = "executed"
+    action.payload = updated_payload
+    action.status = "executed"
     _store_sent_email(action=action, db=db, payload=updated_payload)
     _record_preferences_from_modification(
         action=action,
@@ -85,53 +85,6 @@ def modify_action(
         apply_to_general_preferences=apply_to_general_preferences,
     )
     return action
-
-
-def review_actions(
-    actions: List[Dict[str, Any]],
-    db: Database,
-    *,
-    preference_extractor: PreferenceExtractionAgent | None = None,
-) -> None:
-    """Quick CLI loop to approve, modify, or reject proposed actions."""
-    if not actions:
-        print("No actions to review.")
-        return
-
-    for action in actions:
-        original_payload = copy.deepcopy(action.get("payload", {}))
-
-        print("\nProposed action:")
-        print(json.dumps(action, indent=2))
-        while True:
-            choice = input("Approve (a), modify (m), reject (r): ").strip().lower()
-            if choice in {"a", "approve", "m", "modify", "r", "reject"}:
-                break
-            print("Invalid choice. Please enter 'a', 'm', or 'r'.")
-
-        if choice.startswith("a"):
-            approve_action(action, db)
-            print("Action executed (simulated).")
-        elif choice.startswith("r"):
-            reject_action(action, db)
-            print("Action rejected.")
-        else:
-            updated_payload = _prompt_payload_update(action["payload"])
-            apply_to_general = _prompt_apply_to_general()
-            modify_action(
-                action,
-                db,
-                updated_payload,
-                original_payload=original_payload,
-                preference_extractor=preference_extractor,
-                apply_to_general_preferences=apply_to_general,
-            )
-            print("Action modified and executed (simulated).")
-
-    print("\nFinal action statuses:")
-    for action in actions:
-        print(f" - {action['action_id']}: {action['status']}")
-
 
 def _normalize_recipients(raw: Any) -> List[str]:
     if not raw:
@@ -154,16 +107,16 @@ def _resolve_sender_identity() -> Tuple[str, str]:
         return name, configured_email
 
 
-def _store_sent_email(*, action: Dict[str, Any], db: Database, payload: Dict[str, Any]) -> None:
-    if action.get("type") != "send_email":
+def _store_sent_email(*, action: Action, db: Database, payload: Dict[str, Any]) -> None:
+    if action.type != "send_email":
         return
 
     payload = payload or {}
     if not isinstance(payload, dict):
-        logger.warning("Ignoring non-dict payload for action %s", action.get("action_id"))
+        logger.warning("Ignoring non-dict payload for action %s", action.action_id)
         payload = {}
 
-    original_mail_id = action.get("mail_id")
+    original_mail_id = action.mail_id
     if not original_mail_id:
         return
 
@@ -198,21 +151,21 @@ def _store_sent_email(*, action: Dict[str, Any], db: Database, payload: Dict[str
     try:
         db.insert_email(sent_email)
     except Exception as exc:
-        logger.exception("Failed to store sent email for action %s: %s", action.get("action_id"), exc)
+        logger.exception("Failed to store sent email for action %s: %s", action.action_id, exc)
 
 
 
 
 def _record_preferences_from_modification(
     *,
-    action: Dict[str, Any],
+    action: Action,
     db: Database,
     original_payload: Dict[str, Any],
     updated_payload: Dict[str, Any],
     preference_extractor: PreferenceExtractionAgent | None,
     apply_to_general_preferences: bool,
 ) -> None:
-    if action.get("type") != "send_email" or preference_extractor is None:
+    if action.type != "send_email" or preference_extractor is None:
         return
 
     extraction = _extract_preferences_from_modification(
@@ -242,7 +195,7 @@ def _record_preferences_from_modification(
                 recipient_email=recipient,
                 preference_key=key,
                 preference_value=str(value),
-                source_action_id=action["action_id"],
+                source_action_id=action.action_id,
             )
 
 

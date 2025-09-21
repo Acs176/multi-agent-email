@@ -4,6 +4,7 @@ from .summarizer import EmailSummarizerAgent
 from .drafter import EmailDrafterAgent, EmailDraft
 from .scheduler import EmailSchedulerAgent, ProposedEvent
 from .preferences import PreferenceExtractionAgent, PreferenceExtraction
+from .conversation import EmailConversationAgent, ConversationReply, ConversationSource
 
 __all__ = [
     "EmailClassifierAgent",
@@ -15,4 +16,7 @@ __all__ = [
     "ProposedEvent",
     "PreferenceExtractionAgent",
     "PreferenceExtraction",
+    "EmailConversationAgent",
+    "ConversationReply",
+    "ConversationSource",
 ]

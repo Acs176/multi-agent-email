@@ -132,12 +132,11 @@ async def approve_action_endpoint(
     payload: ApproveActionRequest, db: Annotated[Database, Depends(get_db)]
 ) -> Action:
     action = _fetch_action_or_404(db, payload.action_id)
-    action_dict = action.model_dump()
-    updated = approve_action(action_dict, db)
+    updated = approve_action(action, db)
     _maybe_update_result(db, payload.action_id, payload.result)
     if payload.result is not None:
-        updated["result"] = payload.result
-    return Action.model_validate(updated)
+        updated.result = payload.result
+    return updated
 
 
 @app.post("/action/reject", response_model=Action)
@@ -145,12 +144,11 @@ async def reject_action_endpoint(
     payload: RejectActionRequest, db: Annotated[Database, Depends(get_db)]
 ) -> Action:
     action = _fetch_action_or_404(db, payload.action_id)
-    action_dict = action.model_dump()
-    updated = reject_action(action_dict, db)
+    updated = reject_action(action, db)
     _maybe_update_result(db, payload.action_id, payload.result)
     if payload.result is not None:
-        updated["result"] = payload.result
-    return Action.model_validate(updated)
+        updated.result = payload.result
+    return updated
 
 
 @app.post("/action/modify", response_model=Action)
@@ -163,12 +161,11 @@ async def modify_action_endpoint(
 ) -> Action:
     action = _fetch_action_or_404(db, payload.action_id)
     original_payload = copy.deepcopy(action.payload)
-    action_dict = action.model_dump()
 
     extractor = preference_extractor if payload.record_preferences else None
     updated = await asyncio.to_thread(
         modify_action,
-        action_dict,
+        action,
         db,
         updated_payload=payload.payload,
         original_payload=original_payload,
@@ -177,6 +174,6 @@ async def modify_action_endpoint(
     )
     _maybe_update_result(db, payload.action_id, payload.result)
     if payload.result is not None:
-        updated["result"] = payload.result
-    return Action.model_validate(updated)
+        updated.result = payload.result
+    return updated
 
